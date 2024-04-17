@@ -59,14 +59,14 @@ void test3(uint64_t timestamp,
 	device3_euler_type e = device3_get_euler(q);
 	
 	if (d >= 0.00005f) {
-		device3_euler_type e0 = device3_get_euler(old);
+		// device3_euler_type e0 = device3_get_euler(old);
 		
-		printf("Roll: %f; Pitch: %f; Yaw: %f\n", e0.roll, e0.pitch, e0.yaw);
-		printf("Roll: %f; Pitch: %f; Yaw: %f\n", e.roll, e.pitch, e.yaw);
-		printf("D = %f; ( %f )\n", d, dmax);
+		// printf("Roll: %f; Pitch: %f; Yaw: %f\n", e0.roll, e0.pitch, e0.yaw);
+		// printf("Roll: %f; Pitch: %f; Yaw: %f\n", e.roll, e.pitch, e.yaw);
+		// printf("D = %f; ( %f )\n", d, dmax);
 		
-		printf("X: %f; Y: %f; Z: %f; W: %f;\n", old.x, old.y, old.z, old.w);
-		printf("X: %f; Y: %f; Z: %f; W: %f;\n", q.x, q.y, q.z, q.w);
+		// printf("X: %f; Y: %f; Z: %f; W: %f;\n", old.x, old.y, old.z, old.w);
+		// printf("X: %f; Y: %f; Z: %f; W: %f;\n", q.x, q.y, q.z, q.w);
 	} else {
 		printf("Roll: %.2f; Pitch: %.2f; Yaw: %.2f\n", e.roll, e.pitch, e.yaw);
 	}
@@ -104,6 +104,7 @@ int main(int argc, const char** argv) {
 	if (pid == 0) {
 		device3_type dev3;
 		if (DEVICE3_ERROR_NO_ERROR != device3_open(&dev3, test3)) {
+			printf("It's not type 3.\n");
 			return 1;
 		}
 
@@ -118,6 +119,7 @@ int main(int argc, const char** argv) {
 		device4_type dev4;
 		if (DEVICE4_ERROR_NO_ERROR != device4_open(&dev4, test4)) {
 			status = 1;
+			printf("It's not type 4.\n");
 			goto exit;
 		}
 

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(xrealAirLinuxDriver C)
 
+
+add_definitions(-DNDEBUG)
+
 set(CMAKE_C_STANDARD 17)
 
 add_subdirectory(interface_lib)
