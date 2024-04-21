@@ -341,7 +341,7 @@ device3_error_type device3_open(device3_type* device, device3_event_callback cal
 			.gain = 0.5f,
 			.accelerationRejection = 10.0f,
 			.magneticRejection = 20.0f,
-			.recoveryTriggerPeriod = 5 * SAMPLE_RATE, /* 5 seconds */
+			.recoveryTriggerPeriod = 5 * 1000, /* 5 seconds */
 	};
 	
 	FusionAhrsSetSettings((FusionAhrs*) device->ahrs, &settings);

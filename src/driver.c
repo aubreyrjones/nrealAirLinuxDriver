@@ -31,16 +31,47 @@
 
 #include <math.h>
 
+#include <stdio.h>
+#include <time.h>
+
+struct timespec last_call_time = {0, 0};
+
+float target_function() {
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &current_time);
+    
+	float elapsed = 0.0f;
+
+    if (last_call_time.tv_sec != 0 || last_call_time.tv_nsec != 0) {
+        long elapsed_sec = current_time.tv_sec - last_call_time.tv_sec;
+        long elapsed_nsec = current_time.tv_nsec - last_call_time.tv_nsec;
+        if (elapsed_nsec < 0) {
+            elapsed_sec--;
+            elapsed_nsec += 1000000000; // 1 second in nanoseconds
+        }
+        long elapsed_us = elapsed_sec * 1000000L + elapsed_nsec / 1000L;
+		long elapsed_ms = elapsed_sec * 1000L + elapsed_nsec / 1000000L;
+        elapsed = elapsed_ms / 1000.0f;
+    }
+    
+    last_call_time = current_time;
+
+	return elapsed;
+}
+
 void test3(uint64_t timestamp,
 		   device3_event_type event,
 		   const device3_ahrs_type* ahrs) {
 	static device3_quat_type old;
+	static device3_euler_type old_e;
 	static float dmax = -1.0f;
 	
+	float dt = target_function();
+
 	if (event != DEVICE3_EVENT_UPDATE) {
 		return;
 	}
-	
+
 	device3_quat_type q = device3_get_orientation(ahrs);
 	
 	const float dx = (old.x - q.x) * (old.x - q.x);
@@ -50,28 +81,30 @@ void test3(uint64_t timestamp,
 	
 	const float d = sqrtf(dx*dx + dy*dy + dz*dz + dw*dw);
 	
-	if (dmax < 0.0f) {
-		dmax = 0.0f;
-	} else {
-		dmax = (d > dmax? d : dmax);
-	}
-	
 	device3_euler_type e = device3_get_euler(q);
-	
-	if (d >= 0.00005f) {
-		// device3_euler_type e0 = device3_get_euler(old);
-		
-		// printf("Roll: %f; Pitch: %f; Yaw: %f\n", e0.roll, e0.pitch, e0.yaw);
-		// printf("Roll: %f; Pitch: %f; Yaw: %f\n", e.roll, e.pitch, e.yaw);
-		// printf("D = %f; ( %f )\n", d, dmax);
-		
-		// printf("X: %f; Y: %f; Z: %f; W: %f;\n", old.x, old.y, old.z, old.w);
-		// printf("X: %f; Y: %f; Z: %f; W: %f;\n", q.x, q.y, q.z, q.w);
-	} else {
-		printf("Roll: %.2f; Pitch: %.2f; Yaw: %.2f\n", e.roll, e.pitch, e.yaw);
-	}
+	printf("{"
+			"\"roll\": %.4f, "
+			"\"pitch\": %.4f, "
+			"\"yaw\": %.4f, "
+			"\"dRoll\": %.4f, "
+			"\"dPitch\": %.4f, "
+			"\"dYaw\": %.4f, "
+			"\"dt\": %.4f "
+		"}\n", e.roll, e.pitch, e.yaw, e.roll - old_e.roll, e.pitch - old_e.pitch, e.yaw - old_e.yaw, dt);
+
+	// printf("{"
+	// 		"\"x\": %.4f, "
+	// 		"\"y\": %.4f, "
+	// 		"\"z\": %.4f, "
+	// 		"\"w\": %.4f, "
+	// 		"\"dx\": %f, "
+	// 		"\"dy\": %f, "
+	// 		"\"dz\": %f, "
+	// 		"\"dw\": %f"
+	// 	"}\n", q.x, q.y, q.z, q.w, dx, dy, dz, dw);
 	
 	old = q;
+	old_e = e;
 }
 
 void test4(uint64_t timestamp,
@@ -93,6 +126,19 @@ void test4(uint64_t timestamp,
 	}
 }
 
+#define POLL_FREQUENCY_MS 10  // Desired polling frequency in milliseconds
+
+// Function to perform rate-limited polling
+void rate_limited_polling(device3_type* dev3) {
+    struct timespec start, end;
+    long time_diff_ns;
+    long sleep_time_ms;
+
+    while (DEVICE3_ERROR_NO_ERROR == device3_read(dev3, -1)) {
+        usleep(POLL_FREQUENCY_MS * 1000);
+    }
+}
+
 int main(int argc, const char** argv) {
 	pid_t pid = fork();
 	
@@ -110,7 +156,8 @@ int main(int argc, const char** argv) {
 
 		device3_clear(&dev3);
 		device3_calibrate(&dev3, 1000, true, true, false);
-		while (DEVICE3_ERROR_NO_ERROR == device3_read(&dev3, -1));
+		//while (DEVICE3_ERROR_NO_ERROR == device3_read(&dev3, -1));
+		rate_limited_polling(&dev3);
 		device3_close(&dev3);
 		return 0;
 	} else {
